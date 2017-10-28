@@ -85,6 +85,8 @@ void GameLoop()
 	static int iPosX = 0;
 	static int iPosY = 0;
 	static int iDir = 0;
+	static int iPosXEx = 0;
+	static int iPosYEx = 0;
 	if(timeGetTime() - iLastTime > 200)
 	{
 		iLastTime = timeGetTime();
@@ -123,9 +125,12 @@ void GameLoop()
 			}
 			break;
 		}
+		iPosXEx = rand() % (g_iWidth / 10);
+		iPosYEx = rand() % (g_iHeight / 10);
 	}
 
-	g_StarsGameEngine->DrawLineAnt(40, 30, iPosX, iPosY);
+	//g_StarsGameEngine->DrawLineAnt(40, 30, iPosX, iPosY);
+	g_StarsGameEngine->DrawTriangle(40, 30, iPosX, iPosY, iPosXEx, iPosYEx);
 	g_StarsGameEngine->Run();
 }
 

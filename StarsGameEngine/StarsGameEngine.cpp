@@ -31,6 +31,39 @@ float rfPart(float fValue)
 	return 1.f - fPart(fValue);
 }
 
+void SortByY(int& iPointX1, int& iPointY1, int& iPointX2, int& iPointY2, int& iPointX3, int& iPointY3)
+{
+	if(iPointY1 > iPointY2)
+	{
+		int iTempX = iPointX1;
+		int iTempY = iPointY1;
+		iPointX1 = iPointX2;
+		iPointY1 = iPointY2;
+		iPointX2 = iTempX;
+		iPointY2 = iTempY;
+	}
+
+	if(iPointY2 > iPointY3)
+	{
+		int iTempX = iPointX2;
+		int iTempY = iPointY2;
+		iPointX2 = iPointX3;
+		iPointY2 = iPointY3;
+		iPointX3 = iTempX;
+		iPointY3 = iTempY;
+	}
+
+	if (iPointY1 > iPointY2)
+	{
+		int iTempX = iPointX1;
+		int iTempY = iPointY1;
+		iPointX1 = iPointX2;
+		iPointY1 = iPointY2;
+		iPointX2 = iTempX;
+		iPointY2 = iTempY;
+	}
+}
+
 /////////////////////////////////////////
 
 
@@ -226,6 +259,36 @@ void StarsGameEngine::DrawLineAnt(float fBeginX, float fBeginY, float fEndX, flo
 			DrawPointBrightness((int)intery + 1, x, fPart(intery));
 		}
 		intery += fDelat;
+	}
+}
+
+void StarsGameEngine::DrawTriangle(int iPointX1, int iPointY1, int iPointX2, int iPointY2, int iPointX3, int iPointY3)
+{
+	SortByY(iPointX1, iPointY1, iPointX2, iPointY2, iPointX3, iPointY3);
+
+	// 特殊情况
+	if (iPointY1 == iPointY3)
+	{
+		DrawLine(iPointX1, iPointY1, iPointX2, iPointY1);
+		DrawLine(iPointX1, iPointY1, iPointX3, iPointY1);
+		return;
+	}
+
+
+	for (int y = iPointY1; y <= iPointY3; ++y)
+	{
+		if (y < iPointY2 || (y == iPointY2 && iPointY2 == iPointY3))
+		{
+			float fXS = iPointX1 == iPointX3 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointX1 - iPointX3);
+			float fXE = iPointX1 == iPointX2 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY2) * (iPointX1 - iPointX2);
+			DrawLine(fXS, y, fXE, y);
+		}
+		else
+		{
+			float fXS = iPointX1 == iPointX3 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointX1 - iPointX3);
+			float fXE = iPointX2 == iPointX3 ? iPointX2 : iPointX2 - (iPointY2 - y) * 1.0f / (iPointY2 - iPointY3) * (iPointX2 - iPointX3);
+			DrawLine(fXS, y, fXE, y);
+		}
 	}
 }
 

@@ -21,6 +21,7 @@ public:
 	void Run();
 	void DrawLine(int iBeginX, int iBeginY, int iEndX, int iEndY);
 	void DrawLineAnt(float fBeginX, float fBeginY, float fEndX, float fEndY);
+	void DrawTriangle(int iPointX1, int iPointY1, int iPointX2, int iPointY2, int iPointX3, int iPointY3);
 	bool ClipLine(float& fBeginX, float& fBeginY, float& fEndX, float& fEndY);
 	void DrawPoint(int iPosX, int iPosY, unsigned int iColor);
 	void DrawPointBrightness(int iPosX, int iPosY, float fBrightness);
