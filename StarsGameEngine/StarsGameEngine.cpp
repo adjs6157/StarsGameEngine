@@ -64,6 +64,131 @@ void SortByY(int& iPointX1, int& iPointY1, int& iPointX2, int& iPointY2, int& iP
 	}
 }
 
+//y方向的视角 纵横比 近剪裁平面到原点的距离 远剪裁平面到原点的距离
+D3DMATRIX BuildProjectionMatrix(float fov, float aspect, float znear, float zfar)
+{
+	D3DMATRIX proj;
+	ZeroMemory(&proj, sizeof(D3DMATRIX));
+
+	proj._11 = 1 / tan(fov * 0.5f) / aspect;
+	proj._22 = 1 / tan(fov * 0.5f);
+	proj._33 = -(znear + zfar) / (zfar - znear);
+	proj._34 = -(2 * znear * zfar) / (zfar - znear);
+	proj._43 = -1;
+
+	return proj;
+}
+
+D3DMATRIX MatrixDotMatrix(const D3DMATRIX& kM1, const D3DMATRIX& kM2);
+D3DMATRIX BuildViewMatrix(const Vector3& kCameraPos, const Vector3& kCameraRotate)
+{
+	D3DMATRIX ProjView;
+	ZeroMemory(&ProjView, sizeof(D3DMATRIX));
+	D3DMATRIX projRotateX;
+	ZeroMemory(&projRotateX, sizeof(D3DMATRIX));
+	D3DMATRIX projRotateY;
+	ZeroMemory(&projRotateY, sizeof(D3DMATRIX));
+	D3DMATRIX projRotateZ;
+	ZeroMemory(&projRotateZ, sizeof(D3DMATRIX));
+	D3DMATRIX projMove;
+	ZeroMemory(&projMove, sizeof(D3DMATRIX));
+	D3DMATRIX projNsgats;
+	ZeroMemory(&projNsgats, sizeof(D3DMATRIX));
+
+	float fSinX = sin(-kCameraRotate.fX);
+	float fCosX = cos(-kCameraRotate.fX);
+	float fSinY = sin(-kCameraRotate.fY);
+	float fConsY = cos(-kCameraRotate.fY);
+	float fSinZ = sin(-kCameraRotate.fZ);
+	float fCosZ = cos(-kCameraRotate.fZ);
+
+	projRotateX._11 = 1;
+	projRotateX._22 = fCosX;
+	projRotateX._34 = -fSinX;
+	projRotateX._32 = fSinX;
+	projRotateX._33 = fCosX;
+	projRotateX._44 = 1;
+
+	projRotateY._11 = fConsY;
+	projRotateY._13 = fSinY;
+	projRotateY._22 = 1;
+	projRotateY._31 = -fSinY;
+	projRotateY._33 = fConsY;
+	projRotateY._44 = 1;
+
+	projRotateZ._11 = fCosZ;
+	projRotateZ._12 = -fSinZ;
+	projRotateZ._21 = fSinZ;
+	projRotateZ._22 = fCosZ;
+	projRotateZ._33 = 1;
+	projRotateZ._44 = 1;
+
+	projMove._11 = 1;
+	projMove._14 = -kCameraPos.fX;
+	projMove._22 = 1;
+	projMove._24 = -kCameraPos.fY;
+	projMove._33 = 1;
+	projMove._34 = -kCameraPos.fZ;
+	projMove._44 = 1;
+
+	projNsgats._11 = 1;
+	projNsgats._22 = 1;
+	projNsgats._33 = -1;
+	
+	ProjView = MatrixDotMatrix(projRotateZ, projMove);
+	ProjView = MatrixDotMatrix(projRotateX, ProjView);
+	ProjView = MatrixDotMatrix(projRotateY, ProjView);
+	ProjView = MatrixDotMatrix(projNsgats, ProjView);
+
+	return ProjView;
+}
+
+SiPonit PointDotMatrix(const SiPonit& kPoint, const D3DMATRIX& kMatrix)
+{
+	SiPonit kReslut;
+	kReslut.rhw = kPoint.rhw;
+	kReslut.color = kPoint.color;
+	kReslut.x = kPoint.x * kMatrix._11 + kPoint.y * kMatrix._21 + kPoint.z * kMatrix._31 + 1.f * kMatrix._41;
+	kReslut.y = kPoint.x * kMatrix._12 + kPoint.y * kMatrix._22 + kPoint.z * kMatrix._32 + 1.f * kMatrix._42;
+	kReslut.z = kPoint.x * kMatrix._13 + kPoint.y * kMatrix._23 + kPoint.z * kMatrix._33 + 1.f * kMatrix._43;
+	kReslut.rhw = kPoint.x * kMatrix._14 + kPoint.y * kMatrix._24 + kPoint.z * kMatrix._34 + 1.f * kMatrix._43;
+	return kReslut;
+}
+
+SiPonit MatrixDotPoint(const SiPonit& kPoint, const D3DMATRIX& kMatrix)
+{
+	SiPonit kReslut;
+	kReslut.rhw = kPoint.rhw;
+	kReslut.color = kPoint.color;
+	kReslut.x = kMatrix._11 * kPoint.x + kMatrix._12 * kPoint.y + kMatrix._13 * kPoint.z + kMatrix._14 * 1;
+	kReslut.y = kMatrix._21 * kPoint.x + kMatrix._22 * kPoint.y + kMatrix._23 * kPoint.z + kMatrix._24 * 1;
+	kReslut.z = kMatrix._31 * kPoint.x + kMatrix._32 * kPoint.y + kMatrix._33 * kPoint.z + kMatrix._34 * 1;
+	kReslut.rhw = kMatrix._41 * kPoint.x + kMatrix._42 * kPoint.y + kMatrix._43 * kPoint.z + kMatrix._44 * 1;
+	return kReslut;
+}
+
+D3DMATRIX MatrixDotMatrix( const D3DMATRIX& kM1, const D3DMATRIX& kM2)
+{
+	D3DMATRIX kResult;
+	kResult._11 = kM1._11 * kM2._11 + kM1._12 * kM2._21 + kM1._13 * kM2._31 + kM1._14 * kM2._41;
+	kResult._12 = kM1._11 * kM2._12 + kM1._12 * kM2._22 + kM1._13 * kM2._32 + kM1._14 * kM2._42;
+	kResult._13 = kM1._11 * kM2._13 + kM1._12 * kM2._23 + kM1._13 * kM2._33 + kM1._14 * kM2._43;
+	kResult._14 = kM1._11 * kM2._14 + kM1._12 * kM2._24 + kM1._13 * kM2._34 + kM1._14 * kM2._44;
+	kResult._21 = kM1._21 * kM2._11 + kM1._22 * kM2._21 + kM1._23 * kM2._31 + kM1._24 * kM2._41;
+	kResult._22 = kM1._21 * kM2._12 + kM1._22 * kM2._22 + kM1._23 * kM2._32 + kM1._24 * kM2._42;
+	kResult._23 = kM1._21 * kM2._13 + kM1._22 * kM2._23 + kM1._23 * kM2._33 + kM1._24 * kM2._43;
+	kResult._24 = kM1._21 * kM2._14 + kM1._22 * kM2._24 + kM1._24 * kM2._34 + kM1._24 * kM2._44;
+	kResult._31 = kM1._31 * kM2._11 + kM1._32 * kM2._21 + kM1._33 * kM2._31 + kM1._34 * kM2._41;
+	kResult._32 = kM1._31 * kM2._12 + kM1._32 * kM2._22 + kM1._33 * kM2._32 + kM1._34 * kM2._42;
+	kResult._33 = kM1._31 * kM2._13 + kM1._32 * kM2._23 + kM1._33 * kM2._33 + kM1._34 * kM2._43;
+	kResult._34 = kM1._31 * kM2._14 + kM1._32 * kM2._24 + kM1._33 * kM2._34 + kM1._34 * kM2._44;
+	kResult._41 = kM1._41 * kM2._11 + kM1._42 * kM2._21 + kM1._43 * kM2._31 + kM1._44 * kM2._41;
+	kResult._42 = kM1._41 * kM2._12 + kM1._42 * kM2._22 + kM1._43 * kM2._32 + kM1._44 * kM2._42;
+	kResult._43 = kM1._41 * kM2._13 + kM1._42 * kM2._23 + kM1._43 * kM2._33 + kM1._44 * kM2._43;
+	kResult._44 = kM1._41 * kM2._14 + kM1._42 * kM2._24 + kM1._43 * kM2._34 + kM1._44 * kM2._44;
+	return kResult;
+}
+
 /////////////////////////////////////////
 
 
@@ -71,10 +196,16 @@ StarsGameEngine::StarsGameEngine()
 {
 	m_VertexBuffer = nullptr;
 	m_akPointVec.clear();
-	m_iViewBottom = 10;
-	m_iViewTop = 50;
-	m_iViewLeft = 10;
-	m_iViewRight = 70;
+	m_iViewBottom = 100;
+	m_iViewTop = 500;
+	m_iViewLeft = 100;
+	m_iViewRight = 700;
+	m_kCameraPos = Vector3();
+	m_kCameraRotate = Vector3();
+	ZeroMemory(&m_kProjection, sizeof(D3DMATRIX));
+	m_kProjection = BuildProjectionMatrix(D3DX_PI / 3, 1.333f, 40, 1000);
+	ZeroMemory(&m_kView, sizeof(D3DMATRIX));
+	m_kView = BuildViewMatrix(m_kCameraPos, m_kCameraRotate);
 }
 
 StarsGameEngine::~StarsGameEngine()
@@ -292,6 +423,22 @@ void StarsGameEngine::DrawTriangle(int iPointX1, int iPointY1, int iPointX2, int
 	}
 }
 
+void StarsGameEngine::DrawTriAngle3D(int iPointX1, int iPointY1, int iPointZ1, int iPointX2, int iPointY2, int iPointZ2, int iPointX3, int iPointY3, int iPointZ3)
+{
+	SiPonit kPointTemp1(iPointX1, iPointY1, iPointZ1, 0);
+	SiPonit kPoint1;
+	kPoint1 = VertexTransform(kPointTemp1);
+
+	SiPonit kPointTemp2(iPointX2, iPointY2, iPointZ2, 0);
+	SiPonit kPoint2;
+	kPoint2 = VertexTransform(kPointTemp2);
+
+	SiPonit kPointTemp3(iPointX3, iPointY3, iPointZ3, 0);
+	SiPonit kPoint3;
+	kPoint3 = VertexTransform(kPointTemp3);
+	DrawTriangle(kPoint1.x, kPoint1.y, kPoint2.x, kPoint2.y, kPoint3.x, kPoint3.y);
+}
+
 #define INSIDE 0
 #define OUT_LEFT 1
 #define OUT_RIGHT 2
@@ -396,11 +543,33 @@ void StarsGameEngine::DrawPointBrightness(int iPosX, int iPosY, float fBrightnes
 	DrawPoint(iPosX, iPosY, (int(fBrightness * 0x000000ff) << 24) + 0x00000000);
 }
 
+void StarsGameEngine::SetCameraPosition(const Vector3& kPos)
+{
+	m_kCameraPos = kPos;
+	m_kView = BuildViewMatrix(m_kCameraPos, m_kCameraRotate);
+}
+
+Vector3 StarsGameEngine::GetCameraPosition()
+{
+	return m_kCameraPos;
+}
+
+void StarsGameEngine::SetCameraRotate(const Vector3& kRotate)
+{
+	m_kCameraRotate = kRotate;
+	m_kView = BuildViewMatrix(m_kCameraPos, m_kCameraRotate);
+}
+
+Vector3 StarsGameEngine::GetCameraRotate()
+{
+	return m_kCameraRotate;
+}
+
 void StarsGameEngine::FillVertexBuffer(std::vector<SiPonit>& akPointVec)
 {
 	int iPointSize = akPointVec.size();
 
-	HRESULT hr = device9->CreateVertexBuffer(iPointSize* sizeof(SiPonit)* 6, 0, D3D_FVF_VECTOR, D3DPOOL_SYSTEMMEM, &m_VertexBuffer, nullptr);
+	HRESULT hr = device9->CreateVertexBuffer(iPointSize* sizeof(SiPonit), 0, D3D_FVF_VECTOR, D3DPOOL_SYSTEMMEM, &m_VertexBuffer, nullptr);
 	if (FAILED(hr)) {
 		return;
 	}
@@ -411,15 +580,15 @@ void StarsGameEngine::FillVertexBuffer(std::vector<SiPonit>& akPointVec)
 	for (int i = 0; i < iPointSize; ++i)
 	{
 		SiPonit& kPoint = akPointVec[i];
-		int iBeginIndex = i * 6;
-		vectors[iBeginIndex] = SiPonit(kPoint.x * 10, kPoint.y * 10 + 10, kPoint.z, kPoint.color);
-		vectors[iBeginIndex + 1] = SiPonit(kPoint.x * 10, kPoint.y * 10, kPoint.z, kPoint.color);
+		int iBeginIndex = i;
+		vectors[iBeginIndex] = SiPonit(kPoint.x, kPoint.y, kPoint.z, kPoint.color);
+		/*vectors[iBeginIndex + 1] = SiPonit(kPoint.x * 10, kPoint.y * 10, kPoint.z, kPoint.color);
 		vectors[iBeginIndex + 2] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10, kPoint.z, kPoint.color);
 		vectors[iBeginIndex + 3] = SiPonit(kPoint.x * 10, kPoint.y * 10 + 10, kPoint.z, kPoint.color);
 		vectors[iBeginIndex + 4] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10, kPoint.z, kPoint.color);
-		vectors[iBeginIndex + 5] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10 + 10, kPoint.z, kPoint.color);
+		vectors[iBeginIndex + 5] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10 + 10, kPoint.z, kPoint.color);*/
 	}
-	m_iVertexBufferCount = iPointSize * 6;
+	m_iVertexBufferCount = iPointSize;
 }
 
 void StarsGameEngine::Render(IDirect3DVertexBuffer9* pkVertexBuffer)
@@ -439,8 +608,40 @@ void StarsGameEngine::Render(IDirect3DVertexBuffer9* pkVertexBuffer)
 	device9->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
 	device9->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 	device9->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	device9->DrawPrimitive(D3DPT_TRIANGLELIST, 0, m_iVertexBufferCount / 3);
+	device9->DrawPrimitive(D3DPT_POINTLIST, 0, m_iVertexBufferCount);
 	device9->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
 	device9->EndScene();
 	device9->Present(0, 0, 0, 0);
+}
+
+SiPonit StarsGameEngine::VertexTransform(const SiPonit& kPoint)
+{
+	SiPonit kReslult = kPoint;
+	WroldTransForm(kReslult);
+	ViewTransForm(kReslult);
+	ProjectionTransForm(kReslult);
+	ScreenTransForm(kReslult);
+	return kReslult;
+}
+
+void StarsGameEngine::WroldTransForm(SiPonit& kPoint)
+{
+	return;
+}
+
+void StarsGameEngine::ViewTransForm(SiPonit& kPoint)
+{
+	kPoint = MatrixDotPoint(kPoint, m_kView);
+	return;
+}
+
+void StarsGameEngine::ProjectionTransForm(SiPonit& kPoint)
+{
+	kPoint = MatrixDotPoint(kPoint, m_kProjection);
+}
+
+void StarsGameEngine::ScreenTransForm(SiPonit& kPoint)
+{
+	kPoint.x = kPoint.x * g_iWidth / 2 / kPoint.rhw + g_iWidth / 2;
+	kPoint.y = kPoint.y * g_iHeight / 2 / kPoint.rhw + g_iHeight / 2;
 }

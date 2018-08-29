@@ -79,8 +79,47 @@ BOOL InitGame()
 	return TRUE;
 }
 
+void ProcessInput()
+{
+	static int iLastUpdateTime = timeGetTime();
+	if (timeGetTime() - iLastUpdateTime > 10)
+	{
+		iLastUpdateTime = timeGetTime();
+
+		Vector3 kCameraPos = g_StarsGameEngine->GetCameraPosition();
+
+		if (GetKeyState('W') & 0x800)
+		{
+			kCameraPos.fX += 30;
+		}
+		if (GetKeyState('S') & 0x800)
+		{
+			kCameraPos.fX -= 30;
+		}
+		if (GetKeyState('A') & 0x800)
+		{
+			kCameraPos.fY += 30;
+		}
+		if (GetKeyState('D') & 0x800)
+		{
+			kCameraPos.fY -= 30;
+		}
+		if (GetKeyState('R') & 0x800)
+		{
+			kCameraPos.fZ += 30;
+		}
+		if (GetKeyState('F') & 0x800)
+		{
+			kCameraPos.fZ -= 30;
+		}
+		g_StarsGameEngine->SetCameraPosition(kCameraPos);
+	}
+}
+
 void GameLoop()
 {
+	ProcessInput();
+
 	static int iLastTime = timeGetTime();
 	static int iPosX = 0;
 	static int iPosY = 0;
@@ -93,23 +132,23 @@ void GameLoop()
 		switch(iDir)
 		{
 		case 0:
-			iPosX += 2;
-			if(iPosX * 10 > g_iWidth)
+			iPosX += 10;
+			if(iPosX > g_iWidth)
 			{
-				iPosX = g_iWidth / 10;
+				iPosX = g_iWidth;
 				iDir = (iDir + 1) % 4;
 			}
 			break;
 		case 1:
-			iPosY += 2;
-			if (iPosY * 10 > g_iHeight)
+			iPosY += 10;
+			if (iPosY > g_iHeight)
 			{
-				iPosY = g_iHeight / 10;
+				iPosY = g_iHeight;
 				iDir = (iDir + 1) % 4;
 			}
 			break;
 		case 2:
-			iPosX -= 2;
+			iPosX -= 10;
 			if(iPosX < 0)
 			{
 				iPosX = 0;
@@ -117,7 +156,7 @@ void GameLoop()
 			}
 			break;
 		case 3:
-			iPosY -= 2;
+			iPosY -= 10;
 			if(iPosY < 0)
 			{
 				iPosY = 0;
@@ -125,12 +164,27 @@ void GameLoop()
 			}
 			break;
 		}
-		iPosXEx = rand() % (g_iWidth / 10);
-		iPosYEx = rand() % (g_iHeight / 10);
+		iPosXEx = rand() % (g_iWidth);
+		iPosYEx = rand() % (g_iHeight);
 	}
+	//////画线//////////////////////////////////////////////////////////////////////////
+	//g_StarsGameEngine->DrawLine(400, 300, iPosX, iPosY);
+	////////////////////////////////////////////////////////////////////////////////////
 
-	//g_StarsGameEngine->DrawLineAnt(40, 30, iPosX, iPosY);
-	g_StarsGameEngine->DrawTriangle(40, 30, iPosX, iPosY, iPosXEx, iPosYEx);
+	//////画线(带抗锯齿)/////////////////////////////////////////////////////////////////
+	//g_StarsGameEngine->DrawLineAnt(400, 300, iPosX, iPosY);
+	////////////////////////////////////////////////////////////////////////////////////
+
+	//////2D三角形//////////////////////////////////////////////////////////////////////////
+	//g_StarsGameEngine->DrawTriangle(400, 300, iPosX, iPosY, iPosXEx, iPosYEx);
+	////////////////////////////////////////////////////////////////////////////////////
+
+	///////3D三角形///////////////////////////////////////////////////////////////////////////
+	g_StarsGameEngine->DrawTriAngle3D(100, 100, 100, 100, 100, -100, 100, -100, -100);
+	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 100, -100, 100, 100, -100, 100, -100);
+	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 100, -100, 100, 100, -100, -100, 100);
+	//g_StarsGameEngine->DrawTriAngle3D(500, 300, 500, 100, 300, 1000, 500, 300, 1000);
+	////////////////////////////////////////////////////////////////////////////////////
 	g_StarsGameEngine->Run();
 }
 

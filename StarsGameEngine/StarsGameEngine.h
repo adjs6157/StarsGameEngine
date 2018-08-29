@@ -4,12 +4,44 @@
 #include <D3D9.h>
 
 struct SiPonit {
-	SiPonit(float v_x, float v_y, float v_z, DWORD c) : x(v_x), y(v_y), z(v_z), color(c) {
+	SiPonit()
+	{
+		x = y = z = 0.f;
+		rhw = 1.0f;
+		color = 0;
+	}
+	SiPonit(float v_x, float v_y, float v_z, DWORD c) 
+		: x(v_x), y(v_y), z(v_z), color(c) 
+	{
 		rhw = 1.0f;
 	}
 	float x, y, z, rhw;
 	DWORD color;
 };
+
+struct Vector3
+{
+	Vector3()
+	{
+		fX = 0;
+		fY = 0;
+		fZ = 0;
+	}
+
+	Vector3(float _fX, float _fY, float _fZ)
+	{
+		fX = _fX;
+		fY = _fY;
+		fZ = _fZ;
+	}
+
+	float fX;
+	float fY;
+	float fZ;
+};
+
+#define D3DX_PI 3.1415926f
+#define D3DX_2PI (D3DX_PI * 2)
 
 class StarsGameEngine
 {
@@ -22,14 +54,24 @@ public:
 	void DrawLine(int iBeginX, int iBeginY, int iEndX, int iEndY);
 	void DrawLineAnt(float fBeginX, float fBeginY, float fEndX, float fEndY);
 	void DrawTriangle(int iPointX1, int iPointY1, int iPointX2, int iPointY2, int iPointX3, int iPointY3);
+	void DrawTriAngle3D(int iPointX1, int iPointY1, int iPointZ1, int iPointX2, int iPointY2, int iPointZ2, int iPointX3, int iPointY3, int iPointZ3);
 	bool ClipLine(float& fBeginX, float& fBeginY, float& fEndX, float& fEndY);
 	void DrawPoint(int iPosX, int iPosY, unsigned int iColor);
 	void DrawPointBrightness(int iPosX, int iPosY, float fBrightness);
+	void SetCameraPosition(const Vector3& kPos);
+	Vector3 GetCameraPosition();
+	void SetCameraRotate(const Vector3& kRotate);
+	Vector3 GetCameraRotate();
 
 private:
 	int ComputeLineCode(float x, float y);
 	void FillVertexBuffer(std::vector<SiPonit>& m_akPointVec);
 	void Render(IDirect3DVertexBuffer9* pkVertexBuffer);
+	SiPonit VertexTransform(const SiPonit&  kPoint);
+	void WroldTransForm(SiPonit& kPoint);
+	void ViewTransForm(SiPonit& kPoint);
+	void ProjectionTransForm(SiPonit& kPoint);
+	void ScreenTransForm(SiPonit& kPoint);
 private:
 	std::vector<SiPonit> m_akPointVec;
 	IDirect3DVertexBuffer9* m_VertexBuffer;
@@ -38,4 +80,8 @@ private:
 	int						m_iViewRight;
 	int						m_iViewBottom;
 	int						m_iViewTop;
+	D3DMATRIX				m_kProjection;
+	Vector3					m_kCameraPos;
+	Vector3					m_kCameraRotate;
+	D3DMATRIX				m_kView;
 };
