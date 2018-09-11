@@ -104,15 +104,42 @@ void ProcessInput()
 		{
 			kCameraPos.fY -= 30;
 		}
-		if (GetKeyState('R') & 0x800)
+		if (GetKeyState('Q') & 0x800)
 		{
 			kCameraPos.fZ += 30;
 		}
-		if (GetKeyState('F') & 0x800)
+		if (GetKeyState('E') & 0x800)
 		{
 			kCameraPos.fZ -= 30;
 		}
 		g_StarsGameEngine->SetCameraPosition(kCameraPos);
+
+		Vector3 kCameraRotate = g_StarsGameEngine->GetCameraRotate();
+		if (GetKeyState('I') & 0x800)
+		{
+			kCameraRotate.fX += 0.01;
+		}
+		if (GetKeyState('K') & 0x800)
+		{
+			kCameraRotate.fX -= 0.01;
+		}
+		if (GetKeyState('J') & 0x800)
+		{
+			kCameraRotate.fY += 0.01;
+		}
+		if (GetKeyState('L') & 0x800)
+		{
+			kCameraRotate.fY -= 0.01;
+		}
+		if (GetKeyState('U') & 0x800)
+		{
+			kCameraRotate.fZ += 0.01;
+		}
+		if (GetKeyState('O') & 0x800)
+		{
+			kCameraRotate.fZ -= 0.01;
+		}
+		g_StarsGameEngine->SetCameraRotate(kCameraRotate);
 	}
 }
 
