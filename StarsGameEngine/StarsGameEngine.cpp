@@ -64,6 +64,40 @@ void SortByY(int& iPointX1, int& iPointY1, int& iPointX2, int& iPointY2, int& iP
 	}
 }
 
+
+void SortByY(SiPonit& kPoint1, SiPonit& kPoint2, SiPonit& kPoint3)
+{
+	if (kPoint1.y > kPoint2.y)
+	{
+		SiPonit kTemp = kPoint1;
+		kPoint1 = kPoint2;
+		kPoint2 = kTemp;
+	}
+
+	if (kPoint2.y > kPoint3.y)
+	{
+		SiPonit kTemp = kPoint2;
+		kPoint2 = kPoint3;
+		kPoint3 = kTemp;
+	}
+
+	if (kPoint1.y > kPoint2.y)
+	{
+		SiPonit kTemp = kPoint1;
+		kPoint1 = kPoint2;
+		kPoint2 = kTemp;
+	}
+}
+
+unsigned int ColorAve(unsigned int iColor, float percent)
+{
+	int iAlph = ((iColor & 0xff000000) >> 24) * percent;
+	int iRed = ((iColor & 0x00ff0000) >> 16) * percent;
+	int iGreen = ((iColor & 0x0000ff00) >> 8) * percent;
+	int iBlue = ((iColor & 0x0000ff) >> 0) * percent;
+	return (iAlph << 24) + (iRed << 16) + (iGreen << 8) + iBlue;
+}
+
 //y方向的视角 纵横比 近剪裁平面到原点的距离 远剪裁平面到原点的距离
 D3DMATRIX BuildProjectionMatrix(float fov, float aspect, float znear, float zfar)
 {
@@ -195,24 +229,24 @@ D3DMATRIX MatrixDotMatrix( const D3DMATRIX& kM1, const D3DMATRIX& kM2)
 StarsGameEngine::StarsGameEngine()
 {
 	m_VertexBuffer = nullptr;
-	m_akPointVec.clear();
+	//m_akPointVec.clear();
 	m_iViewBottom = 100;
 	m_iViewTop = 500;
 	m_iViewLeft = 100;
 	m_iViewRight = 700;
-	m_kCameraPos = Vector3();
+	m_kCameraPos = Vector3(30, 40, -450);
 	m_kCameraRotate = Vector3();
 	ZeroMemory(&m_kProjection, sizeof(D3DMATRIX));
 	m_kProjection = BuildProjectionMatrix(D3DX_PI / 3, 1.333f, 40, 1000);
 	ZeroMemory(&m_kView, sizeof(D3DMATRIX));
 	m_kView = BuildViewMatrix(m_kCameraPos, m_kCameraRotate);
+	m_akTriangleVec.clear();
 }
 
 StarsGameEngine::~StarsGameEngine()
 {
 
 }
-
 
 bool InitD3D(HWND hwnd)
 {
@@ -251,36 +285,63 @@ bool StarsGameEngine::Initialize()
 {
 	InitD3D(g_hGameWnd);
 
+	m_akFrame = new SiPonit[g_iWidth * g_iHeight];
+	m_aiZOrder = new int[g_iWidth * g_iHeight];
+	SetEngineFlag(StarsEngineFlag_ZOrder | StarsEngineFlag_ZWrite | StarsEngineFlag_Draw_Fill | StarsEngineFlag_Draw_Line);
+
 	return true;
 }
 
 bool StarsGameEngine::Finialize()
 {
+	delete[] m_akFrame;
+	delete[] m_aiZOrder;
 	return true;
+}
+
+void StarsGameEngine::ClearFrame()
+{
+	memset(m_akFrame, 0, g_iWidth * g_iHeight * sizeof(SiPonit));
+	int iIndex = 0;
+	for (int i = 0; i < g_iHeight; ++i)
+	{
+		for (int j = 0; j < g_iWidth; ++j)
+		{
+			iIndex = j + i * g_iWidth;
+			m_akFrame[iIndex].x = j;
+			m_akFrame[iIndex].y = i;
+			m_akFrame[iIndex].z = 0xFFFFFF;
+		}
+	}
+	memset(m_aiZOrder, 0, g_iWidth * g_iHeight * sizeof(int));
 }
 
 void StarsGameEngine::Run()
 {
-	if (m_akPointVec.size() > 0)
+	ClearFrame();
+	// 画家算法处理3D三角形
+	if (m_akTriangleVec.size() > 0)
 	{
-		FillVertexBuffer(m_akPointVec);
-		m_akPointVec.clear();
-		Render(m_VertexBuffer);
-		m_VertexBuffer->Release();
-		m_VertexBuffer = nullptr;
-		m_iVertexBufferCount = 0;
+		ArtistSort(m_akTriangleVec);
+		m_akTriangleVec.clear();
 	}
+
+
+	FillVertexBuffer(m_akFrame, g_iWidth, g_iHeight);
+	Render(m_VertexBuffer);
+	m_VertexBuffer->Release();
+	m_VertexBuffer = nullptr;
 }
 
-void StarsGameEngine::DrawLine(int iBeginX, int iBeginY, int iEndX, int iEndY)
+void StarsGameEngine::DrawLine(SiPonit kPointB, SiPonit kPointE)
 {
-	float fTempX0 = iBeginX, fTempY0 = iBeginY, fTempX1 = iEndX, fTempY1 = iEndY;
+	float fTempX0 = kPointB.x, fTempY0 = kPointB.y, fTempX1 = kPointE.x, fTempY1 = kPointE.y;
 	bool bAccept = ClipLine(fTempX0, fTempY0, fTempX1, fTempY1);
 	if(!bAccept)
 	{
 		return;
 	}
-	iBeginX = fTempX0; iBeginY = fTempY0; iEndX = fTempX1; iEndY = fTempY1;
+	int iBeginX = fTempX0, iBeginY = fTempY0, iEndX = fTempX1, iEndY = fTempY1, iBeginZ = kPointB.z, iEndZ = kPointE.z;
 
 	bool bSweep = false;
 	if(abs(iEndX - iBeginX) < abs(iEndY - iBeginY))
@@ -293,21 +354,25 @@ void StarsGameEngine::DrawLine(int iBeginX, int iBeginY, int iEndX, int iEndY)
 	{
 		Swap(iBeginX, iEndX);
 		Swap(iBeginY, iEndY);
+		Swap(iBeginZ, iEndZ);
 	}
 
 	int iDeltaX = iEndX - iBeginX;
 	int iDeltaY = abs(iEndY - iBeginY);
+	int iDeltaZ = iEndZ - iBeginZ;
 	float fDelat = iDeltaY * 1.0f / iDeltaX;
 	int iDeltaDivY = (iEndY - iBeginY) > 0 ? 1 : -1;
 	int y = iBeginY;
 	float fOffY = 0.f;
+	float fOffZ = 0.f;
 
 	//创建Rectangle  
 	int iTempX, iTempY;
 	for (int x = iBeginX; x < iEndX; ++x)
 	{
+		float percent = (x - iBeginX) * 1.0f / (iEndX - iBeginX);
 		if (bSweep) { iTempX = y, iTempY = x; } else { iTempX = x, iTempY = y; }
-		DrawPoint(iTempX, iTempY, 0xff000000);
+		DrawPoint(iTempX, iTempY, iBeginZ + percent * iDeltaZ, ColorAve(kPointB.color, percent) + ColorAve(kPointE.color, (1 - percent)));
 
 		fOffY += fDelat;
 		if(fOffY >= 0.5f)
@@ -393,50 +458,49 @@ void StarsGameEngine::DrawLineAnt(float fBeginX, float fBeginY, float fEndX, flo
 	}
 }
 
-void StarsGameEngine::DrawTriangle(int iPointX1, int iPointY1, int iPointX2, int iPointY2, int iPointX3, int iPointY3)
+void StarsGameEngine::DrawTriangle(SiPonit kPoint1, SiPonit kPoint2, SiPonit kPoint3)
 {
-	SortByY(iPointX1, iPointY1, iPointX2, iPointY2, iPointX3, iPointY3);
+	SortByY(kPoint1, kPoint2, kPoint3);
 
 	// 特殊情况
-	if (iPointY1 == iPointY3)
+	if (kPoint1.y == kPoint3.y)
 	{
-		DrawLine(iPointX1, iPointY1, iPointX2, iPointY1);
-		DrawLine(iPointX1, iPointY1, iPointX3, iPointY1);
+		DrawLine(SiPonit(kPoint1.x, kPoint1.y,kPoint1.z,kPoint1.color), SiPonit(kPoint2.x, kPoint2.y,kPoint2.z,kPoint2.color));
+		DrawLine(SiPonit(kPoint1.x, kPoint1.y, kPoint1.z, kPoint1.color), SiPonit(kPoint3.x, kPoint3.y, kPoint3.z, kPoint3.color));
 		return;
 	}
 
+	int iPointY1 = kPoint1.y, iPointY2 = kPoint2.y, iPointY3 = kPoint3.y;
+	int iPointX1 = kPoint1.x, iPointX2 = kPoint2.x, iPointX3 = kPoint3.x;
+	int iPointZ1 = kPoint1.z, iPointZ2 = kPoint2.z, iPointZ3 = kPoint3.z;
+	int iColor1 = kPoint1.color, iColor2 = kPoint2.color, iColor3 = kPoint3.color;
 
 	for (int y = iPointY1; y <= iPointY3; ++y)
 	{
+		float percent = (y - iPointY1) * 1.0f / (iPointY3 - iPointY1);
 		if (y < iPointY2 || (y == iPointY2 && iPointY2 == iPointY3))
 		{
 			float fXS = iPointX1 == iPointX3 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointX1 - iPointX3);
 			float fXE = iPointX1 == iPointX2 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY2) * (iPointX1 - iPointX2);
-			DrawLine(fXS, y, fXE, y);
+			float fZS = iPointZ1 == iPointZ3 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointZ1 - iPointZ3);
+			float fZE = iPointZ1 == iPointZ2 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY2) * (iPointZ1 - iPointZ2);
+			DrawLine(SiPonit(fXS, y, fZS, ColorAve(iColor1, percent) + ColorAve(iColor3, (1 - percent))), SiPonit(fXE, y, fZE, ColorAve(iColor1, percent) + ColorAve(iColor2, (1 - percent))));
 		}
 		else
 		{
 			float fXS = iPointX1 == iPointX3 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointX1 - iPointX3);
 			float fXE = iPointX2 == iPointX3 ? iPointX2 : iPointX2 - (iPointY2 - y) * 1.0f / (iPointY2 - iPointY3) * (iPointX2 - iPointX3);
-			DrawLine(fXS, y, fXE, y);
+			float fZS = iPointZ1 == iPointZ3 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointZ1 - iPointZ3);
+			float fZE = iPointZ2 == iPointZ3 ? iPointZ2 : iPointZ2 - (iPointY2 - y) * 1.0f / (iPointY2 - iPointY3) * (iPointZ2 - iPointZ3);
+			DrawLine(SiPonit(fXS, y, fZS, ColorAve(iColor1, percent) + ColorAve(iColor3, (1 - percent))), SiPonit(fXE, y, fZE, ColorAve(iColor2, percent) + ColorAve(iColor3, (1 - percent))));
 		}
 	}
 }
 
-void StarsGameEngine::DrawTriAngle3D(int iPointX1, int iPointY1, int iPointZ1, int iPointX2, int iPointY2, int iPointZ2, int iPointX3, int iPointY3, int iPointZ3)
+void StarsGameEngine::DrawTriAngle3D(int iPointX1, int iPointY1, int iPointZ1, int iPointX2, int iPointY2, int iPointZ2, int iPointX3, int iPointY3, int iPointZ3, unsigned int iColor)
 {
-	SiPonit kPointTemp1(iPointX1, iPointY1, iPointZ1, 0);
-	SiPonit kPoint1;
-	kPoint1 = VertexTransform(kPointTemp1);
-
-	SiPonit kPointTemp2(iPointX2, iPointY2, iPointZ2, 0);
-	SiPonit kPoint2;
-	kPoint2 = VertexTransform(kPointTemp2);
-
-	SiPonit kPointTemp3(iPointX3, iPointY3, iPointZ3, 0);
-	SiPonit kPoint3;
-	kPoint3 = VertexTransform(kPointTemp3);
-	DrawTriangle(kPoint1.x, kPoint1.y, kPoint2.x, kPoint2.y, kPoint3.x, kPoint3.y);
+	Triangle kTriangle(SiPonit(iPointX1, iPointY1, iPointZ1, iColor), SiPonit(iPointX2, iPointY2, iPointZ2, iColor), SiPonit(iPointX3, iPointY3, iPointZ3, iColor));
+	m_akTriangleVec.push_back(kTriangle);
 }
 
 #define INSIDE 0
@@ -533,14 +597,32 @@ bool StarsGameEngine::ClipLine(float& fBeginX, float& fBeginY, float& fEndX, flo
 	return bAccept;
 }
 
-void StarsGameEngine::DrawPoint(int iPosX, int iPosY, unsigned int iColor)
+void StarsGameEngine::DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iColor)
 {
-	m_akPointVec.push_back(SiPonit(iPosX,iPosY,0,iColor));
+	//m_akPointVec.push_back(SiPonit(iPosX,iPosY,0,iColor));
+	SiPonit& kPoint = m_akFrame[iPosY * g_iWidth + iPosX];
+	bool bZOrderPass = true;
+	if (HasEngineFlag(StarsEngineFlag_ZOrder))
+	{
+		if (iPosZ > kPoint.z)
+		{
+			bZOrderPass = false;
+		}
+	}
+
+	if (bZOrderPass)
+	{
+		kPoint.color = iColor;
+		if (HasEngineFlag(StarsEngineFlag_ZWrite))
+		{
+			kPoint.z = iPosZ;
+		}
+	}
 }
 
 void StarsGameEngine::DrawPointBrightness(int iPosX, int iPosY, float fBrightness)
 {
-	DrawPoint(iPosX, iPosY, (int(fBrightness * 0x000000ff) << 24) + 0x00000000);
+	DrawPoint(iPosX, iPosY, 0, (int(fBrightness * 0x000000ff) << 24) + 0x00000000);
 }
 
 void StarsGameEngine::SetCameraPosition(const Vector3& kPos)
@@ -565,9 +647,9 @@ Vector3 StarsGameEngine::GetCameraRotate()
 	return m_kCameraRotate;
 }
 
-void StarsGameEngine::FillVertexBuffer(std::vector<SiPonit>& akPointVec)
+void StarsGameEngine::FillVertexBuffer(SiPonit* akFrame, int iWidth, int iHeight)
 {
-	int iPointSize = akPointVec.size();
+	int iPointSize = iWidth * iHeight;
 
 	HRESULT hr = device9->CreateVertexBuffer(iPointSize* sizeof(SiPonit), 0, D3D_FVF_VECTOR, D3DPOOL_SYSTEMMEM, &m_VertexBuffer, nullptr);
 	if (FAILED(hr)) {
@@ -577,17 +659,22 @@ void StarsGameEngine::FillVertexBuffer(std::vector<SiPonit>& akPointVec)
 	SiPonit *vectors;
 	m_VertexBuffer->Lock(0, 0, (void**)&vectors, 0);
 
-	for (int i = 0; i < iPointSize; ++i)
-	{
-		SiPonit& kPoint = akPointVec[i];
-		int iBeginIndex = i;
-		vectors[iBeginIndex] = SiPonit(kPoint.x, kPoint.y, kPoint.z, kPoint.color);
-		/*vectors[iBeginIndex + 1] = SiPonit(kPoint.x * 10, kPoint.y * 10, kPoint.z, kPoint.color);
-		vectors[iBeginIndex + 2] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10, kPoint.z, kPoint.color);
-		vectors[iBeginIndex + 3] = SiPonit(kPoint.x * 10, kPoint.y * 10 + 10, kPoint.z, kPoint.color);
-		vectors[iBeginIndex + 4] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10, kPoint.z, kPoint.color);
-		vectors[iBeginIndex + 5] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10 + 10, kPoint.z, kPoint.color);*/
-	}
+	memcpy(vectors, akFrame, sizeof(SiPonit)* iPointSize);
+
+	//for (int i = 0; i < iHeight; ++i)
+	//{
+	//	for (int j = 0; j < iWidth; ++j)
+	//	{
+	//		SiPonit& kPoint = akFrame[i];
+	//		int iBeginIndex = i * iWidth + j;
+	//		vectors[iBeginIndex] = SiPonit(j, i, kPoint.z, kPoint.color);
+	//		/*vectors[iBeginIndex + 1] = SiPonit(kPoint.x * 10, kPoint.y * 10, kPoint.z, kPoint.color);
+	//		vectors[iBeginIndex + 2] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10, kPoint.z, kPoint.color);
+	//		vectors[iBeginIndex + 3] = SiPonit(kPoint.x * 10, kPoint.y * 10 + 10, kPoint.z, kPoint.color);
+	//		vectors[iBeginIndex + 4] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10, kPoint.z, kPoint.color);
+	//		vectors[iBeginIndex + 5] = SiPonit(kPoint.x * 10 + 10, kPoint.y * 10 + 10, kPoint.z, kPoint.color);*/
+	//	}
+	//}
 	m_iVertexBufferCount = iPointSize;
 }
 
@@ -644,4 +731,56 @@ void StarsGameEngine::ScreenTransForm(SiPonit& kPoint)
 {
 	kPoint.x = kPoint.x * g_iWidth / 2 / kPoint.rhw + g_iWidth / 2;
 	kPoint.y = kPoint.y * g_iHeight / 2 / kPoint.rhw + g_iHeight / 2;
+}
+
+void StarsGameEngine::ArtistSort(std::vector<Triangle>& akTriangleVec)
+{
+	if (akTriangleVec.size() == 0) return;
+	
+	int iSize = akTriangleVec.size();
+	// 计算重心
+	for (int i = 0; i < iSize; ++i)
+	{
+		akTriangleVec[i].corePoint.x = (akTriangleVec[i].point1.x + akTriangleVec[i].point2.x + akTriangleVec[i].point3.x) / 3;
+		akTriangleVec[i].corePoint.y = (akTriangleVec[i].point1.y + akTriangleVec[i].point2.y + akTriangleVec[i].point3.y) / 3;
+		akTriangleVec[i].corePoint.z = (akTriangleVec[i].point1.z + akTriangleVec[i].point2.z + akTriangleVec[i].point3.z) / 3;
+		WroldTransForm(akTriangleVec[i].corePoint);
+		ViewTransForm(akTriangleVec[i].corePoint);
+	}
+
+	// 排序
+	for (int i = 0; i < iSize; ++i)
+	{
+		for (int j = i + 1; j < iSize; ++j)
+		{
+			if (akTriangleVec[i].corePoint.z > akTriangleVec[j].corePoint.z)
+			{
+				Swap(akTriangleVec[i], akTriangleVec[j]);
+			}
+		}
+	}
+
+	for (int i = 0; i < iSize; ++i)
+	{
+		SiPonit& p1 = VertexTransform(akTriangleVec[i].point1);
+
+		SiPonit& p2 = VertexTransform(akTriangleVec[i].point2);
+
+		SiPonit& p3 = VertexTransform(akTriangleVec[i].point3);
+
+		if (p1.rhw != 0 && p2.rhw != 0 && p3.rhw != 0)
+		{
+			DrawTriangle(p1, p2, p3);
+		}
+	}
+}
+
+bool StarsGameEngine::HasEngineFlag(int iFlag)
+{
+	return (m_iStarsEngineFlag & iFlag == iFlag);
+}
+
+void StarsGameEngine::SetEngineFlag(int iFlag)
+{
+	m_iStarsEngineFlag |= iFlag;
 }
