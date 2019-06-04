@@ -79,9 +79,13 @@
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="StarsGameEngine.cpp" />
+    <ClCompile Include="texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="math.h" />
     <ClInclude Include="StarsGameEngine.h" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="texture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

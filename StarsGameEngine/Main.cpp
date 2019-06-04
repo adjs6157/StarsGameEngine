@@ -207,14 +207,43 @@ void GameLoop()
 	////////////////////////////////////////////////////////////////////////////////////
 
 	///////3D三角形///////////////////////////////////////////////////////////////////////////
-	g_StarsGameEngine->DrawTriAngle3D(100, 150, 150, 100, 150, -50, 100, -50, -50, 0xffff0000);
-	g_StarsGameEngine->DrawTriAngle3D(100, 150, 150, 100, -50, 150, 100, -50, -50, 0xffff0000);
-	g_StarsGameEngine->DrawTriAngle3D(120, 100, 100, 120, 100, -100, 120, -100, -100, 0xff000000);
-	g_StarsGameEngine->DrawTriAngle3D(120, 100, 100, 120, -100, 100, 120, -100, -100, 0xff000000);
-	
-	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 100, -100, 100, 100, -100, -100, 100);
-	//g_StarsGameEngine->DrawTriAngle3D(500, 300, 500, 100, 300, 1000, 500, 300, 1000);
-	////////////////////////////////////////////////////////////////////////////////////
+	//g_StarsGameEngine->DrawTriAngle3D(100, 150, 150, 100, 150, -50, 100, -50, -50, 0xffff0000);
+	//g_StarsGameEngine->DrawTriAngle3D(100, 150, 150, 100, -50, 150, 100, -50, -50, 0xffff0000);
+	//g_StarsGameEngine->DrawTriAngle3D(120, 100, 100, 120, 100, -100, 120, -100, -100, 0xff000000);
+	//g_StarsGameEngine->DrawTriAngle3D(120, 100, 100, 120, -100, 100, 120, -100, -100, 0xff000000);
+	/////////////////////////////////////////////////////////////////////////////////////////
+
+	////////正方形////////////////////////////////////////////////////////////////////////////
+	//// 左
+	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 100, 100, 0, 100, 100, 100, 0, 0xff000000);
+	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 0, 100, 0, 100, 100, 0, 0, 0xff000000);
+	//// 右
+	//g_StarsGameEngine->DrawTriAngle3D(200, 100, 100, 200, 0, 100, 200, 100, 0, 0xffff0000);
+	//g_StarsGameEngine->DrawTriAngle3D(200, 100, 0, 200, 0, 100, 200, 0, 0, 0xffff0000);
+	//// 上
+	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 100, 200, 100, 100, 200, 100, 0, 0xff00ff00);
+	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 100, 200, 100, 0, 100, 100, 0, 0xff00ff00);
+	//// 下
+	//g_StarsGameEngine->DrawTriAngle3D(100, 0, 100, 200, 0, 100, 200, 0, 0, 0xff0000ff);
+	//g_StarsGameEngine->DrawTriAngle3D(100, 0, 100, 200, 0, 0, 100, 0, 0, 0xff0000ff);
+	//// 前
+	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 0, 200, 100, 0, 100, 0, 0, 0xffffff00);
+	//g_StarsGameEngine->DrawTriAngle3D(200, 100, 0, 200, 0, 0, 100, 0, 0, 0xffffff00);
+	//// 后
+	//g_StarsGameEngine->DrawTriAngle3D(100, 100, 100, 200, 100, 100, 100, 0, 100, 0xff00ffff);
+	//g_StarsGameEngine->DrawTriAngle3D(200, 100, 100, 200, 0, 100, 100, 0, 100, 0xff00ffff);
+	/////////////////////////////////////////////////////////////////////////////////////////
+
+	/////////UV 贴图///////////////////////////////////////////////////////////////////////////
+	g_StarsGameEngine->SetEngineFlag(StarsEngineFlag_Draw_UV);
+	SiPonit kPoint1(100, 150, 150, 0xFFFFFFFF); kPoint1.u = 0; kPoint1.v = 0;
+	SiPonit kPoint2(100, 150, -50, 0xFFFFFFFF); kPoint2.u = 1; kPoint2.v = 0;
+	SiPonit kPoint3(100, -50, -50, 0xFFFFFFFF); kPoint3.u = 1; kPoint3.v = 1;
+	SiPonit kPoint4(100, -50, 150, 0xFFFFFFFF); kPoint4.u = 0; kPoint4.v = 1;
+	g_StarsGameEngine->DrawTriAngle3D(kPoint1, kPoint2, kPoint3);
+	g_StarsGameEngine->DrawTriAngle3D(kPoint1, kPoint4, kPoint3);
+	////////////////////////////////////////////////////////////////////////////////////////////
+
 	g_StarsGameEngine->Run();
 }
 

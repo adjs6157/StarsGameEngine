@@ -288,6 +288,7 @@ bool StarsGameEngine::Initialize()
 	m_akFrame = new SiPonit[g_iWidth * g_iHeight];
 	m_aiZOrder = new int[g_iWidth * g_iHeight];
 	SetEngineFlag(StarsEngineFlag_ZOrder | StarsEngineFlag_ZWrite | StarsEngineFlag_Draw_Fill | StarsEngineFlag_Draw_Line);
+	m_kTexture.InitFromFile("1.png");
 
 	return true;
 }
@@ -463,7 +464,7 @@ void StarsGameEngine::DrawTriangle(SiPonit kPoint1, SiPonit kPoint2, SiPonit kPo
 	SortByY(kPoint1, kPoint2, kPoint3);
 
 	// 特殊情况
-	if (kPoint1.y == kPoint3.y)
+	if ((int)(kPoint1.y) == (int)(kPoint3.y))
 	{
 		DrawLine(SiPonit(kPoint1.x, kPoint1.y,kPoint1.z,kPoint1.color), SiPonit(kPoint2.x, kPoint2.y,kPoint2.z,kPoint2.color));
 		DrawLine(SiPonit(kPoint1.x, kPoint1.y, kPoint1.z, kPoint1.color), SiPonit(kPoint3.x, kPoint3.y, kPoint3.z, kPoint3.color));
@@ -500,6 +501,12 @@ void StarsGameEngine::DrawTriangle(SiPonit kPoint1, SiPonit kPoint2, SiPonit kPo
 void StarsGameEngine::DrawTriAngle3D(int iPointX1, int iPointY1, int iPointZ1, int iPointX2, int iPointY2, int iPointZ2, int iPointX3, int iPointY3, int iPointZ3, unsigned int iColor)
 {
 	Triangle kTriangle(SiPonit(iPointX1, iPointY1, iPointZ1, iColor), SiPonit(iPointX2, iPointY2, iPointZ2, iColor), SiPonit(iPointX3, iPointY3, iPointZ3, iColor));
+	m_akTriangleVec.push_back(kTriangle);
+}
+
+void StarsGameEngine::DrawTriAngle3D(SiPonit kPoint1, SiPonit kPoint2, SiPonit kPoint3)
+{
+	Triangle kTriangle(kPoint1, kPoint2, kPoint3);
 	m_akTriangleVec.push_back(kTriangle);
 }
 
@@ -612,7 +619,16 @@ void StarsGameEngine::DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iC
 
 	if (bZOrderPass)
 	{
-		kPoint.color = iColor;
+		DWORD dwColorOut;
+		if (HasEngineFlag(StarsEngineFlag_Draw_UV))
+		{
+			FragmentShader_Tex(SiPonit(iPosX, iPosY, iPosZ, iColor), dwColorOut);
+		}
+		else
+		{
+			FragmentShader(SiPonit(iPosX, iPosY, iPosZ, iColor), dwColorOut);
+		}
+		kPoint.color = dwColorOut;
 		if (HasEngineFlag(StarsEngineFlag_ZWrite))
 		{
 			kPoint.z = iPosZ;
@@ -762,17 +778,32 @@ void StarsGameEngine::ArtistSort(std::vector<Triangle>& akTriangleVec)
 
 	for (int i = 0; i < iSize; ++i)
 	{
-		SiPonit& p1 = VertexTransform(akTriangleVec[i].point1);
+		SiPonit p1, p2, p3;
 
-		SiPonit& p2 = VertexTransform(akTriangleVec[i].point2);
-
-		SiPonit& p3 = VertexTransform(akTriangleVec[i].point3);
+		VertexShader(akTriangleVec[i].point1, p1);
+		VertexShader(akTriangleVec[i].point2, p2);
+		VertexShader(akTriangleVec[i].point3, p3);
 
 		if (p1.rhw != 0 && p2.rhw != 0 && p3.rhw != 0)
 		{
 			DrawTriangle(p1, p2, p3);
 		}
 	}
+}
+
+void StarsGameEngine::VertexShader(const SiPonit& kPoint, SiPonit& kPointOut)
+{
+	kPointOut = VertexTransform(kPoint);
+}
+
+void StarsGameEngine::FragmentShader(const SiPonit& kPoint, DWORD& kColorOut)
+{
+	kColorOut = kPoint.color;
+}
+
+void StarsGameEngine::FragmentShader_Tex(const SiPonit& kPoint, DWORD& kColorOut)
+{
+	kColorOut = m_kTexture.GetColor(kPoint.u,kPoint.v);
 }
 
 bool StarsGameEngine::HasEngineFlag(int iFlag)

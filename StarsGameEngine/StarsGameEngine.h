@@ -2,6 +2,7 @@
 #include <vector>
 #include <Windows.h>
 #include <D3D9.h>
+#include "texture.h"
 
 struct SiPonit {
 	SiPonit()
@@ -9,6 +10,7 @@ struct SiPonit {
 		x = y = z = 0.f;
 		rhw = 1.0f;
 		color = 0;
+		u = v = 0.f;
 	}
 	SiPonit(float v_x, float v_y, float v_z, DWORD c) 
 		: x(v_x), y(v_y), z(v_z), color(c) 
@@ -17,6 +19,7 @@ struct SiPonit {
 	}
 	float x, y, z, rhw;
 	DWORD color;
+	float u, v;
 };
 
 struct Vector3
@@ -73,6 +76,7 @@ enum StarsEngineFlag
 	StarsEngineFlag_ZWrite = 1 << 2,		// 开启写深度缓冲
 	StarsEngineFlag_Draw_Line = 1 << 3,		// 开启线框模式
 	StarsEngineFlag_Draw_Fill = 1 << 4,		// 开启填充模式
+	StarsEngineFlag_Draw_UV = 1 << 4,		// 开启UV贴图
 };
 
 class StarsGameEngine
@@ -88,6 +92,7 @@ public:
 	void DrawLineAnt(float fBeginX, float fBeginY, float fEndX, float fEndY);
 	void DrawTriangle(SiPonit kPoint1, SiPonit kPoint2, SiPonit kPoint3);
 	void DrawTriAngle3D(int iPointX1, int iPointY1, int iPointZ1, int iPointX2, int iPointY2, int iPointZ2, int iPointX3, int iPointY3, int iPointZ3, unsigned int iColor = 0xff000000);
+	void DrawTriAngle3D(SiPonit kPoint1, SiPonit kPoint2, SiPonit kPoint3);
 	bool ClipLine(float& fBeginX, float& fBeginY, float& fEndX, float& fEndY);
 	void DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iColor);
 	void DrawPointBrightness(int iPosX, int iPosY, float fBrightness);
@@ -107,6 +112,9 @@ private:
 	void ProjectionTransForm(SiPonit& kPoint);
 	void ScreenTransForm(SiPonit& kPoint);
 	void ArtistSort(std::vector<Triangle>& akTriangleVec);
+	void VertexShader(const SiPonit& kPoint, SiPonit& kPointOut);
+	void FragmentShader(const SiPonit& kPoint, DWORD& kColorOut);
+	void FragmentShader_Tex(const SiPonit& kPoint, DWORD& kColorOut);
 private:
 	//std::vector<SiPonit> m_akPointVec;
 	SiPonit*				m_akFrame;
@@ -123,4 +131,5 @@ private:
 	D3DMATRIX				m_kView;
 	std::vector<Triangle> m_akTriangleVec;
 	int						m_iStarsEngineFlag;
+	Texture					m_kTexture;
 };

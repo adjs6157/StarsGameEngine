@@ -21,9 +21,21 @@
     <ClCompile Include="StarsGameEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StarsGameEngine.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="texture.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
