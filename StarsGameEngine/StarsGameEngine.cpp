@@ -98,6 +98,20 @@ unsigned int ColorAve(unsigned int iColor, float percent)
 	return (iAlph << 24) + (iRed << 16) + (iGreen << 8) + iBlue;
 }
 
+SiPonit PointLerpByY(SiPonit& kPoint1, SiPonit& kPoint2, float fY)
+{
+	if (kPoint1.y == kPoint2.y) return kPoint2;
+	float percent = (fY - kPoint1.y) * 1.0f / (kPoint2.y - kPoint1.y);
+	SiPonit kResult;
+	kResult.x = kPoint1.x + (kPoint2.x - kPoint1.x) * percent;
+	kResult.y = kPoint1.y + (kPoint2.y - kPoint1.y) * percent;
+	kResult.z = kPoint1.z + (kPoint2.z - kPoint1.z) * percent;
+	kResult.u = kPoint1.u + (kPoint2.u - kPoint1.u) * percent;
+	kResult.v = kPoint1.v + (kPoint2.v - kPoint1.v) * percent;
+	kResult.color = ColorAve(kPoint1.color, percent) + ColorAve(kPoint2.color, (1 - percent));
+	return kResult;
+}
+
 //y方向的视角 纵横比 近剪裁平面到原点的距离 远剪裁平面到原点的距离
 D3DMATRIX BuildProjectionMatrix(float fov, float aspect, float znear, float zfar)
 {
@@ -179,7 +193,7 @@ D3DMATRIX BuildViewMatrix(const Vector3& kCameraPos, const Vector3& kCameraRotat
 
 SiPonit PointDotMatrix(const SiPonit& kPoint, const D3DMATRIX& kMatrix)
 {
-	SiPonit kReslut;
+	SiPonit kReslut = kPoint;
 	kReslut.rhw = kPoint.rhw;
 	kReslut.color = kPoint.color;
 	kReslut.x = kPoint.x * kMatrix._11 + kPoint.y * kMatrix._21 + kPoint.z * kMatrix._31 + 1.f * kMatrix._41;
@@ -191,7 +205,7 @@ SiPonit PointDotMatrix(const SiPonit& kPoint, const D3DMATRIX& kMatrix)
 
 SiPonit MatrixDotPoint(const SiPonit& kPoint, const D3DMATRIX& kMatrix)
 {
-	SiPonit kReslut;
+	SiPonit kReslut = kPoint;
 	kReslut.rhw = kPoint.rhw;
 	kReslut.color = kPoint.color;
 	kReslut.x = kMatrix._11 * kPoint.x + kMatrix._12 * kPoint.y + kMatrix._13 * kPoint.z + kMatrix._14 * 1;
@@ -343,6 +357,7 @@ void StarsGameEngine::DrawLine(SiPonit kPointB, SiPonit kPointE)
 		return;
 	}
 	int iBeginX = fTempX0, iBeginY = fTempY0, iEndX = fTempX1, iEndY = fTempY1, iBeginZ = kPointB.z, iEndZ = kPointE.z;
+	float fBeginU = kPointB.u, fEndU = kPointE.u, fBeginV = kPointB.v, fEndV = kPointE.v;
 
 	bool bSweep = false;
 	if(abs(iEndX - iBeginX) < abs(iEndY - iBeginY))
@@ -356,11 +371,15 @@ void StarsGameEngine::DrawLine(SiPonit kPointB, SiPonit kPointE)
 		Swap(iBeginX, iEndX);
 		Swap(iBeginY, iEndY);
 		Swap(iBeginZ, iEndZ);
+		Swap(fBeginU, fEndU);
+		Swap(fBeginV, fEndV);
 	}
 
 	int iDeltaX = iEndX - iBeginX;
 	int iDeltaY = abs(iEndY - iBeginY);
 	int iDeltaZ = iEndZ - iBeginZ;
+	float fDeltaU = fEndU - fBeginU;
+	float fDeltaV = fEndV - fBeginV;
 	float fDelat = iDeltaY * 1.0f / iDeltaX;
 	int iDeltaDivY = (iEndY - iBeginY) > 0 ? 1 : -1;
 	int y = iBeginY;
@@ -373,7 +392,7 @@ void StarsGameEngine::DrawLine(SiPonit kPointB, SiPonit kPointE)
 	{
 		float percent = (x - iBeginX) * 1.0f / (iEndX - iBeginX);
 		if (bSweep) { iTempX = y, iTempY = x; } else { iTempX = x, iTempY = y; }
-		DrawPoint(iTempX, iTempY, iBeginZ + percent * iDeltaZ, ColorAve(kPointB.color, percent) + ColorAve(kPointE.color, (1 - percent)));
+		DrawPoint(iTempX, iTempY, iBeginZ + percent * iDeltaZ, ColorAve(kPointB.color, percent) + ColorAve(kPointE.color, (1 - percent)), fBeginU + percent * fDeltaU, fBeginV + percent * fDeltaV);
 
 		fOffY += fDelat;
 		if(fOffY >= 0.5f)
@@ -478,22 +497,22 @@ void StarsGameEngine::DrawTriangle(SiPonit kPoint1, SiPonit kPoint2, SiPonit kPo
 
 	for (int y = iPointY1; y <= iPointY3; ++y)
 	{
-		float percent = (y - iPointY1) * 1.0f / (iPointY3 - iPointY1);
+		//float percent = (y - iPointY1) * 1.0f / (iPointY3 - iPointY1);
 		if (y < iPointY2 || (y == iPointY2 && iPointY2 == iPointY3))
 		{
-			float fXS = iPointX1 == iPointX3 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointX1 - iPointX3);
-			float fXE = iPointX1 == iPointX2 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY2) * (iPointX1 - iPointX2);
-			float fZS = iPointZ1 == iPointZ3 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointZ1 - iPointZ3);
-			float fZE = iPointZ1 == iPointZ2 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY2) * (iPointZ1 - iPointZ2);
-			DrawLine(SiPonit(fXS, y, fZS, ColorAve(iColor1, percent) + ColorAve(iColor3, (1 - percent))), SiPonit(fXE, y, fZE, ColorAve(iColor1, percent) + ColorAve(iColor2, (1 - percent))));
+			//float fXS = iPointX1 == iPointX3 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointX1 - iPointX3);
+			//float fXE = iPointX1 == iPointX2 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY2) * (iPointX1 - iPointX2);
+			//float fZS = iPointZ1 == iPointZ3 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointZ1 - iPointZ3);
+			//float fZE = iPointZ1 == iPointZ2 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY2) * (iPointZ1 - iPointZ2);
+			DrawLine(PointLerpByY(kPoint1, kPoint3, y), PointLerpByY(kPoint1, kPoint2, y));
 		}
 		else
 		{
-			float fXS = iPointX1 == iPointX3 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointX1 - iPointX3);
-			float fXE = iPointX2 == iPointX3 ? iPointX2 : iPointX2 - (iPointY2 - y) * 1.0f / (iPointY2 - iPointY3) * (iPointX2 - iPointX3);
-			float fZS = iPointZ1 == iPointZ3 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointZ1 - iPointZ3);
-			float fZE = iPointZ2 == iPointZ3 ? iPointZ2 : iPointZ2 - (iPointY2 - y) * 1.0f / (iPointY2 - iPointY3) * (iPointZ2 - iPointZ3);
-			DrawLine(SiPonit(fXS, y, fZS, ColorAve(iColor1, percent) + ColorAve(iColor3, (1 - percent))), SiPonit(fXE, y, fZE, ColorAve(iColor2, percent) + ColorAve(iColor3, (1 - percent))));
+			//float fXS = iPointX1 == iPointX3 ? iPointX1 : iPointX1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointX1 - iPointX3);
+			//float fXE = iPointX2 == iPointX3 ? iPointX2 : iPointX2 - (iPointY2 - y) * 1.0f / (iPointY2 - iPointY3) * (iPointX2 - iPointX3);
+			//float fZS = iPointZ1 == iPointZ3 ? iPointZ1 : iPointZ1 - (iPointY1 - y) * 1.0f / (iPointY1 - iPointY3) * (iPointZ1 - iPointZ3);
+			//float fZE = iPointZ2 == iPointZ3 ? iPointZ2 : iPointZ2 - (iPointY2 - y) * 1.0f / (iPointY2 - iPointY3) * (iPointZ2 - iPointZ3);
+			DrawLine(PointLerpByY(kPoint1, kPoint3, y), PointLerpByY(kPoint2, kPoint3, y));
 		}
 	}
 }
@@ -604,7 +623,7 @@ bool StarsGameEngine::ClipLine(float& fBeginX, float& fBeginY, float& fEndX, flo
 	return bAccept;
 }
 
-void StarsGameEngine::DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iColor)
+void StarsGameEngine::DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iColor, float u, float v)
 {
 	//m_akPointVec.push_back(SiPonit(iPosX,iPosY,0,iColor));
 	SiPonit& kPoint = m_akFrame[iPosY * g_iWidth + iPosX];
@@ -620,13 +639,15 @@ void StarsGameEngine::DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iC
 	if (bZOrderPass)
 	{
 		DWORD dwColorOut;
+		SiPonit kTemp(iPosX, iPosY, iPosZ, iColor);
+		kTemp.u = u; kTemp.v = v;
 		if (HasEngineFlag(StarsEngineFlag_Draw_UV))
 		{
-			FragmentShader_Tex(SiPonit(iPosX, iPosY, iPosZ, iColor), dwColorOut);
+			FragmentShader_Tex(kTemp, dwColorOut);
 		}
 		else
 		{
-			FragmentShader(SiPonit(iPosX, iPosY, iPosZ, iColor), dwColorOut);
+			FragmentShader(kTemp, dwColorOut);
 		}
 		kPoint.color = dwColorOut;
 		if (HasEngineFlag(StarsEngineFlag_ZWrite))
@@ -638,7 +659,7 @@ void StarsGameEngine::DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iC
 
 void StarsGameEngine::DrawPointBrightness(int iPosX, int iPosY, float fBrightness)
 {
-	DrawPoint(iPosX, iPosY, 0, (int(fBrightness * 0x000000ff) << 24) + 0x00000000);
+	DrawPoint(iPosX, iPosY, 0, (int(fBrightness * 0x000000ff) << 24) + 0x00000000, 0, 0);
 }
 
 void StarsGameEngine::SetCameraPosition(const Vector3& kPos)

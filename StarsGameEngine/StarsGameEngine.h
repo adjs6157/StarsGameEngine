@@ -94,7 +94,7 @@ public:
 	void DrawTriAngle3D(int iPointX1, int iPointY1, int iPointZ1, int iPointX2, int iPointY2, int iPointZ2, int iPointX3, int iPointY3, int iPointZ3, unsigned int iColor = 0xff000000);
 	void DrawTriAngle3D(SiPonit kPoint1, SiPonit kPoint2, SiPonit kPoint3);
 	bool ClipLine(float& fBeginX, float& fBeginY, float& fEndX, float& fEndY);
-	void DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iColor);
+	void DrawPoint(int iPosX, int iPosY, int iPosZ, unsigned int iColor, float u, float v);
 	void DrawPointBrightness(int iPosX, int iPosY, float fBrightness);
 	void SetCameraPosition(const Vector3& kPos);
 	Vector3 GetCameraPosition();

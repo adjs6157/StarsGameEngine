@@ -17,7 +17,7 @@ public:
 
         int i = ConverToIndex(u, v);
 
-		return 0xFF000000 + _data[i] << 16 + _data[i + 1] << 8 + _data[i + 2];
+		return 0xFF000000 + (_data[i] << 16) + (_data[i + 1] << 8) + (_data[i + 2]);
     }
 
 	unsigned int GetW() const { return _w; }
@@ -29,8 +29,8 @@ private:
     {
         u = Math::Clamp(u, 1.0f, 0.0f);
         v = Math::Clamp(v, 1.0f, 0.0f);
-        float x = (u * (_w - 1));
-		float y = (v * (_h - 1));
+        int x = (u * (_w - 1));
+		int y = (v * (_h - 1));
         return static_cast<int>(y * _w * _channel + x * _channel);
     }
 
